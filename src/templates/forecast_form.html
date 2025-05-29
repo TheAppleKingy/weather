@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Введите город</title>
+    <style>
+        .forecast-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input[type="text"] {
+            padding: 10px 15px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            outline-color: #3498db;
+            transition: border-color 0.3s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            border-color: #3498db;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="forecast-container">
+        <h1>Введите название города</h1>
+        <form action="/show_forecast" method="post" id="city-form">
+            <div class="input-wrapper">
+                <input type="text" name="city" id="city-input" placeholder="Город" required autocomplete="off">
+                <div class="suggestions" id="suggestions"></div>
+            </div>
+            <button type="submit">Показать прогноз</button>
+        </form>
+    </div>
+
+    <script>
+        const cityInput = document.getElementById('city-input');
+        const suggestionsContainer = document.getElementById('suggestions');
+        const form = document.getElementById('city-form');
+
+        function showSuggestions(cities) {
+            suggestionsContainer.innerHTML = '';
+            cities.forEach(city => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+
+                let displayText = city.name;
+                if (city.admin1 && city.admin1.trim() !== '' && city.admin1 !== city.name) {
+                    displayText += `, ${city.admin1}`;
+                }
+                if (city.country && city.country.trim() !== '') {
+                    displayText += `, ${city.country}`;
+                }
+
+                item.textContent = displayText;
+
+                item.dataset.cityData = JSON.stringify({
+                    name: city.name,
+                    latitude: city.latitude,
+                    longitude: city.longitude,
+                    country: city.country,
+                    admin1: city.admin1
+                });
+
+                item.addEventListener('click', () => {
+                    cityInput.value = city.name;
+                    suggestionsContainer.style.display = 'none';
+
+                    localStorage.setItem('lastCity', city.name);
+
+                    const cityData = JSON.parse(item.dataset.cityData);
+                    console.log("Selected city:", cityData);
+                });
+
+                suggestionsContainer.appendChild(item);
+            });
+            suggestionsContainer.style.display = 'block';
+        }
+
+        async function fetchSuggestions(query) {
+            try {
+                const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=ru&format=json`);
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    showSuggestions(data.results);
+                } else {
+                    suggestionsContainer.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error fetching city suggestions:', error);
+                suggestionsContainer.style.display = 'none';
+            }
+        }
+
+        cityInput.addEventListener('input', function (e) {
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            fetchSuggestions(query);
+        });
+
+        cityInput.addEventListener('focus', function () {
+            if (cityInput.value.trim() === '') {
+                const lastCity = localStorage.getItem('lastCity');
+                if (lastCity) {
+                    showSuggestions([{ name: lastCity, admin1: '', country: '' }]);
+                }
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (e.target !== cityInput && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+
+        form.addEventListener('submit', function () {
+            const city = cityInput.value.trim();
+            if (city) {
+                localStorage.setItem('lastCity', city);
+            }
+        });
+    </script>
+</body>
+
+</html>

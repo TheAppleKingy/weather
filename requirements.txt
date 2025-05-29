@@ -1,0 +1,9 @@
+alembic
+asyncpg
+fastapi
+aiohttp
+uvicorn
+starlette
+SQLAlchemy
+jinja2
+python-multipart

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "uvicorn app:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./src:/src
+
+  database:
+    image: postgres:14.6-alpine
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=weather_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=CJANW4xVm1P6O1Z
+
+volumes:
+  db_data:
